@@ -1,1 +1,25 @@
-aW1wb3J0IHsgUm91dGVyIH0gZnJvbSAnaXR0eS1yb3V0ZXInOwppbXBvcnQgeyBBaSB9IGZyb20gJ0BjbG91ZGZsYXJlL2FpJzsKY29uc3Qgcm91dGVyID0gUm91dGVyKCk7Cgpyb3V0ZXIucG9zdCgnL3NlYXJjaCcsIGFzeW5jIChyZXEsIGVudikgPT4gewogIGNvbnN0IHsgcXVlcnkgfSA9IGF3YWl0IHJlcS5qc29uKCk7CiAgY29uc3QgYWkgPSBuZXcgQWkoZW52LkFJKTsKCiAgY29uc3QgcHJvbXB0cyA9IGBJIGFtIGEgc2VhcmNoIHF1ZXJ5IG9wdGltaXplci4gUmV3cml0ZSB0aGlzIG5hdHVyYWwgbGFuZ3VhZ2UgcXVlcnkgaW50byAzLTUgR2l0SHViIHNlYXJjaCBxdWVyaWVzLgpRdWVyeTogIiR7cXVlcnl9IgpTZWFyY2ggcXVlcmllczpgOwoKICBjb25zdCB7IHJlc3BvbnNlIH0gPSBhd2FpdCBhaS5ydW4oJ0BjZi9tZXRhL2xsYW1hLTMtOGItaW5zdHJ1Y3QnLCB7IHByb21wdDogcHJvbXB0cyB9KTsKICBjb25zdCBzZWFyY2hlcyA9IHJlc3BvbnNlLnNwbGl0KCdcblxuJykuc2xpY2UoMCk7CgogIGNvbnN0IGFsbFJlc3VsdHMgPSBhd2FpdCBQcm9taXNlLmFsbChzZWFyY2hlcy5tYXAoZSA9PiAKICAgIGZldGNoKGBodHRwczovL2FwaS5naXRodWIuY29tL3NlYXJjaC9yZXBvc2l0b3JpZXM/cT0ke2VuY29kZVVSSUNvbXBvbmVudChlKX0mc29ydD1zdGFycyZ orderPWRlc2MmIHBlcnBhZ2U9MSZwZXJfcGFnZT0yNSwgewogICAgIGhlYWRlcnM6IHsgJ0FjY2VwdCc6ICdhcHBsaWNhdGlvbi92bmQuZ2l0aHViK2p
+import { Router } from 'itty-router';
+import { Ai } from '@cloudflare/ai';
+import { runGitHubSearch } from './agents/githubQueryAgent';
+import { processResponse } from './agents/resultProcessorAgent';
+
+const router = Router();
+
+router.post('/search', async (req, env) = {
+  const { query } = await req.json();
+  const ai = new Ai(env.AI);
+
+  // GitHub Agent: Run query and fetch matching repositories
+  const results = await runGitHubSearch(ai, query);
+
+  // Result Agent: Store to D1 and return metrics with AI rationale
+  const output = await processResponse(env.DB, results);
+
+  return new Response(JSON.stringify(output), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+});
+
+export default {
+  fetch: router.handle,
+};
