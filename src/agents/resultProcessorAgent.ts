@@ -1,1 +1,36 @@
-aW1wb3J0IHsgU1FMRGlzY3JldGlvbkRhdGFiYXNlIH0gZnJvbSAnd29ya2Vycy1kMSc7CgpleHBvcnQgY3MgewogIGFzeW5jIGZ1bmN0aW9uIHByb2Nlc3NSZXNwb25zZShkYjogU1FMRGlzY3JldGlvbkRhdGFiYXNlLCBkYXRhOiBhbnlbXSkgewogICAgLy8gU2F2ZSB0byBEMSBkYXRhYmFzZQogICAgYXdhaXQgUHJvbWlzZS5hbGwoZGF0YS5tYXAoYXN5bmMgdj0+ewogICAgICBjb25zdCBqID0gSlNPTi5zdHJpbmdpZnkodik7CiAgICAgIHJldHVybiBhd2FpdCBkYi5leGVjKCdJTlNFUlQgaW50byByZXBvc19yZXN1bHRzIChqc29uKSBWQUxVRVMgKD8pJywgalMKICAgIH0pKTsKCiAgICAvLyBDb21wdXRlIG1ldHJpY3MgYXMgcGVyIHJlcXVpcmVkCiAgICBjb25zdCBtZXRyaWNzID0gewogICAgICB0b3RhbFJlcG9zOiBkYXRhLmxlbmd0aCwKICAgICAgdG9wU3RhcnM6IFt...
+import { SQLDatabase } from 'workers-d1';
+
+export const processResponse = async (db: SQLDatabase, data: any[]) = {
+  // Store search results to D1
+  await Promise.all(
+    data.map(async (repo) = {
+      const j = JSON.stringify(repo);
+      return await db.exec('INSERT INTO repos_results (json) VALUES (?)', j);
+    })
+  );
+
+  // Generate metrics
+  const topics = {};
+  let totalStars = 0;
+
+  for (const repo of data) {
+    if (repo.topics) {
+      for (const t of repo.topics) {
+        topics[t] = (topics[t] || 0) + 1;
+      }
+    }
+    totalStars += repo.stargazers_count || 0;
+  }
+
+  const sortedRepos = data.sort((a, b) = b.stargazers_count - a.stargazers_count || a.full_name.localeCompare(b.full_name));
+  const top10 = sortedRepos.slice(0, 10);
+  const low10 = sortedRepos.slice(-10);
+
+  return {
+    totalRepos: data.length,
+    totalStars,
+    uniqueTopics: Object.entries(topics).sort((a, b) = b[1] - a[1]),
+    top10,
+    low10,
+    repos: sortedRepos.map(repo = ({
+      name: repo.fu
