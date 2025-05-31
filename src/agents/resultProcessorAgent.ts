@@ -1,6 +1,4 @@
-import { SQLDatabase } from 'workers-d1';
-
-export const processResponse = async (db: SQLDatabase, data: any[]) = {
+export const processResponse = async (db: any, data: any[]) = {
   // Store search results to D1
   await Promise.all(
     data.map(async (repo) = {
@@ -10,7 +8,7 @@ export const processResponse = async (db: SQLDatabase, data: any[]) = {
   );
 
   // Generate metrics
-  const topics = {};
+  const topics: Recordstring, number = {};
   let totalStars = 0;
 
   for (const repo of data) {
@@ -22,7 +20,10 @@ export const processResponse = async (db: SQLDatabase, data: any[]) = {
     totalStars += repo.stargazers_count || 0;
   }
 
-  const sortedRepos = data.sort((a, b) = b.stargazers_count - a.stargazers_count || a.full_name.localeCompare(b.full_name));
+  const sortedRepos = data.sort((a, b) =
+    b.stargazers_count - a.stargazers_count ||
+    a.full_name.localeCompare(b.full_name)
+  );
   const top10 = sortedRepos.slice(0, 10);
   const low10 = sortedRepos.slice(-10);
 
@@ -33,4 +34,5 @@ export const processResponse = async (db: SQLDatabase, data: any[]) = {
     top10,
     low10,
     repos: sortedRepos.map(repo = ({
-      name: repo.fu
+      name: repo.full_name,
+      url
