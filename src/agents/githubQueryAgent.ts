@@ -1,1 +1,15 @@
-aW1wb3J0IHsgQWkgfSBmcm9tICdAY2xvdWRmbGFyZS9haSc7CgpleHBvcnQgY3sKICBhc3luYyBmdW5jdGlvbiBydW5HaXRIdWJTZWFyY2goYWk6IEFpLCBxdWVyeTogc3RyaW5nKTogUHJvbWlzZTxhbnlbXT4gewogICAgY29uc3QgcHJvbXB0cyA9IGBZWW91IGFyZSBhIHNlYXJjaCBvcHRpbWl6ZXIuIFJld3JpdGUgdGhpcyBuYXR1cmFsIGxhbmd1YWdlIHF1ZXJ5IGludG8gMy01IGRpdmVyc2UgR2l0SHViIHNlYXJjaCBxdWVyaWVzLgpRdWVyeTogIiR7cXVlcnl9IgpTZWFyY2ggcXVlcmllczpgOwpgOwogICAgY29uc3QgeyByZXNwb25zZSB9ID0gYXdhaXQgYWkucnVuKCdAY2YvbWV0YS9sbGFtYS0zLThiLWluc3RydWN0JywgeyBwcm9tcHQ6IHByb21wdHMgfSk7CiAgICBjb25zdCBzZWFyY2hlcyA9IHJlc3BvbnNlLnNwbGl0KCdcblxuJykuc2xpY2UoMCk7CgogICAgY29uc3QgYWxsUmVzdWx0cyA9IGF3YWl0IFByb21pc2UuYWxsKHNlYXJjaGVzLm1hcCgoZSk6IFByb21pc2U8YW55W10+ID0+CiAgICAgIGZldGNoKGBodHRwczovL2FwaS5naXRodWIuY29tL3NlYXJjaC9yZXBvc2l0b3JpZXM/cT0ke2VuY29kZVVSSUNvbXBvbmVudChlKX0mc29ydD1zdGFycyZvcmdlcj1kZXNjJiwgewogICAgICAgIGhlYWRlcnM6IHsgJ0FjY2VwdCc6ICdhcHBsaWNhdGlvbi92bmQuZ2l0aHViK2pzb24nIH0KICAgICAgfSkudGhlbihyID0+IHIuanNvbigpKSk7CgogICAgcmV0dXJuIFtbLi4ubmV3IE1hcCghITAsIGl0ZW0gPT4g
+import { Ai } from '@cloudflare/ai';
+
+export const runGitHubSearch = async (ai: Ai, query: string): Promiseany[] = {
+  const prompts = `You are a search query optimizer. Rewrite this natural language query into 3-5 diverse GitHub search queries.\nQuery: "${query}"\nSearch queries:`;
+  const { response } = await ai.run('@cf/meta/llama-3-8b-instruct', { prompt: prompts });
+  const searches = response.split('\n\n').slice(0);
+
+  const allResults = await Promise.all(searches.map(async (e): Promiseany[] =
+    fetch(`https://api.github.com/search/repositories?q=${encodeURIComponent(e)}&sort=stars&order=desc`, {
+      headers: { 'Accept': 'application/vnd.github+json' }
+    }).then(r = r.json()).then(r = r.items || [])
+  ));
+
+  return [...new Map([].concat(...allResults).filter(Boolean).map(repo = [repo.full_name, repo])).values()];
+};
