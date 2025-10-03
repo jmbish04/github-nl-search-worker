@@ -1,0 +1,20 @@
+name = "github-nl-search"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "github-search-db"
+database_id = "d657ff22-4451-4c7c-8728-d608ea5d7442"
+
+[[r2_buckets]]
+binding = "ARTIFACTS"
+bucket_name = "github-search-artifacts"
+
+[[assets]]
+binding = "ASSETS"
+bucket = "./public"
+
+[vars]
+GITHUB_API_URL = "https://api.github.com"

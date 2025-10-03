@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>GitHub NL Search Worker Docs</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; line-height: 1.6; }
+      pre { background: #f5f5f5; padding: 1rem; overflow-x: auto; }
+    </style>
+  </head>
+  <body>
+    <h1>GitHub NL Search Worker</h1>
+    <p>This Worker exposes REST, WebSocket, and MCP endpoints for orchestrating GitHub repository discovery and Cloudflare scaffold generation.</p>
+    <p>Download the OpenAPI specification at <a href="/openapi.json">/openapi.json</a>.</p>
+    <h2>Quick Start</h2>
+    <ol>
+      <li>Create a session via <code>POST /api/sessions</code>.</li>
+      <li>Start a search with <code>POST /api/sessions/{session_id}/search?wait=true</code>.</li>
+      <li>List results or generate scaffolds with <code>POST /api/scaffolds</code>.</li>
+    </ol>
+  </body>
+</html>
