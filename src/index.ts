@@ -1,23 +1,21 @@
-import { Router } from 'itty-router';
-import { runGitHubSearch } from './agents/githubQueryAgent';
-import { processResponse } from './agents/resultProcessorAgent';
+import { createApiRouter, ApiEnv } from './routes';
+import { handleSessionWebSocket } from './ws';
+import { handleMcpRequest } from './mcp';
 
-const router = Router();
-
-router.post('/search', async (req, env) = {
-  const { query } = await req.json();
-
-  // GitHub Agent: Run query and fetch matching repositories
-  const results = await runGitHubSearch(env.AI, query);
-
-  // Result Agent: Store to D1 and return metrics with AI rationale
-  const output = await processResponse(env.DB, results);
-
-  return new Response(JSON.stringify(output), {
-    headers: { 'Content-Type': 'application/json' },
-  });
-});
+const api = createApiRouter();
 
 export default {
-  fetch: router.handle,
+  async fetch(request: Request, env: ApiEnv, ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(request.url);
+    if (url.pathname.startsWith('/ws/')) {
+      return handleSessionWebSocket(request, env);
+    }
+    if (url.pathname === '/mcp') {
+      return handleMcpRequest(request, env);
+    }
+    if (url.pathname === '/openapi.json' || url.pathname.startsWith('/docs')) {
+      return env.ASSETS.fetch(request);
+    }
+    return api.fetch(request, env, ctx);
+  },
 };

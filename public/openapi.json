@@ -1,0 +1,414 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "GitHub Natural Language Search Worker API",
+    "version": "1.0.0",
+    "description": "REST API for managing natural-language GitHub searches, scaffolds, and session lifecycle."
+  },
+  "servers": [
+    { "url": "https://example.com" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Session": {
+        "type": "object",
+        "properties": {
+          "session_id": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "natural_language_request": { "type": "string" },
+          "deleted_at": { "type": ["string", "null"], "format": "date-time" }
+        }
+      },
+      "SearchAttempt": {
+        "type": "object",
+        "properties": {
+          "attempt_id": { "type": "integer" },
+          "result_group": { "type": "integer" },
+          "search_query": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "judge_summary": { "type": ["string", "null"] },
+          "recommendations": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      },
+      "SearchResult": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "session_id": { "type": "string" },
+          "search_attempt_id": { "type": "integer" },
+          "repo_id": { "type": "string" },
+          "repo_url": { "type": "string", "format": "uri" },
+          "judge_relevance_score": { "type": ["number", "null"] },
+          "judge_finding": { "type": ["string", "null"] }
+        }
+      },
+      "Scaffold": {
+        "type": "object",
+        "properties": {
+          "scaffold_id": { "type": "string" },
+          "title": { "type": "string" },
+          "artifact_key": { "type": "string" },
+          "cf_bindings": { "type": "object" },
+          "mcp_doc_evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": { "type": "string" },
+                "url": { "type": "string", "format": "uri" },
+                "snippet": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [{ "bearerAuth": [] }],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "Health check",
+        "responses": {
+          "200": {
+            "description": "Health payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string" },
+                    "timestamp": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions": {
+      "post": {
+        "summary": "Create session",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "natural_language_request": { "type": "string" },
+                  "session_id": { "type": "string" }
+                },
+                "required": ["natural_language_request"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created session",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Session" }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List sessions",
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } },
+          { "name": "cursor", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sessions with pagination",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Session" }
+                    },
+                    "nextCursor": { "type": ["string", "null"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}": {
+      "get": {
+        "summary": "Get session detail",
+        "parameters": [
+          { "name": "session_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "session": { "$ref": "#/components/schemas/Session" },
+                    "attempts_count": { "type": "integer" },
+                    "results_count": { "type": "integer" },
+                    "latest_attempt": { "$ref": "#/components/schemas/SearchAttempt" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/search": {
+      "post": {
+        "summary": "Start search lifecycle",
+        "parameters": [
+          { "name": "session_id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "wait", "in": "query", "schema": { "type": "boolean" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": { "type": "string" },
+                  "base_keywords": { "type": "boolean" },
+                  "max_results": { "type": "integer" },
+                  "search_within_sessions": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "retry_policy": {
+                    "type": "object",
+                    "properties": {
+                      "max_attempts": { "type": "integer" },
+                      "min_score": { "type": "number" }
+                    }
+                  }
+                },
+                "required": ["query"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Search started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "attempt_id": { "type": "integer" },
+                    "result_group": { "type": "integer" },
+                    "expanded_queries": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    },
+                    "started_at": { "type": "string", "format": "date-time" },
+                    "lifecycle": {
+                      "type": "object",
+                      "properties": {
+                        "attempts": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/SearchAttempt" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/attempts": {
+      "get": {
+        "summary": "List attempts",
+        "parameters": [
+          { "name": "session_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attempts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "attempts": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/SearchAttempt" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/results": {
+      "get": {
+        "summary": "List search results",
+        "parameters": [
+          { "name": "session_id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "attempt_id", "in": "query", "schema": { "type": "integer" } },
+          { "name": "min_score", "in": "query", "schema": { "type": "number" } },
+          { "name": "q", "in": "query", "schema": { "type": "string" } },
+          { "name": "dedupe", "in": "query", "schema": { "type": "boolean", "default": true } },
+          { "name": "sort", "in": "query", "schema": { "type": "string", "enum": ["score_desc", "stars_desc", "time_desc"] } },
+          { "name": "cursor", "in": "query", "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Result page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/SearchResult" }
+                    },
+                    "nextCursor": { "type": ["string", "null"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scaffolds": {
+      "post": {
+        "summary": "Create scaffold",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "session_id": { "type": "string" },
+                  "attempt_id": { "type": "integer" },
+                  "selected_repo_ids": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "user_prompt": { "type": "string" },
+                  "scaffold_title": { "type": "string" },
+                  "bindings": { "type": "object" }
+                },
+                "required": ["session_id", "selected_repo_ids", "user_prompt", "scaffold_title"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Scaffold metadata",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Scaffold" }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List scaffolds",
+        "parameters": [
+          { "name": "session_id", "in": "query", "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } },
+          { "name": "cursor", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scaffolds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Scaffold" }
+                    },
+                    "nextCursor": { "type": ["string", "null"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scaffolds/{scaffold_id}": {
+      "get": {
+        "summary": "Scaffold detail",
+        "parameters": [
+          { "name": "scaffold_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scaffold detail",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Scaffold" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scaffolds/{scaffold_id}/download": {
+      "get": {
+        "summary": "Get scaffold download",
+        "parameters": [
+          { "name": "scaffold_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Presigned URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "download_url": { "type": "string", "format": "uri" },
+                    "curl": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
