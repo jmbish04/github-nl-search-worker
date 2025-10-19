@@ -56,7 +56,7 @@ startSearchBtn.addEventListener('click', () => {
   results.innerHTML = '';
 
   const wsUrl = new URL(`/ws/sessions/${sessionId}`, window.location.href);
-  wsUrl.protocol = 'ws';
+  wsUrl.protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   ws = new WebSocket(wsUrl.toString());
 
   ws.onopen = () => {
