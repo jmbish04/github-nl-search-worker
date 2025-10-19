@@ -555,23 +555,14 @@
 
           for (const item of detailItems) {
             const container = document.createElement('div');
-            container.style.background = 'rgba(15, 23, 42, 0.6)';
-            container.style.border = '1px solid rgba(148, 163, 184, 0.2)';
-            container.style.borderRadius = '10px';
-            container.style.padding = '0.75rem 0.9rem';
+            container.className = 'attempt-detail-item';
 
             const label = document.createElement('div');
-            label.style.fontSize = '0.75rem';
-            label.style.textTransform = 'uppercase';
-            label.style.letterSpacing = '0.08em';
-            label.style.color = '#64748b';
+            label.className = 'attempt-detail-item__label';
             label.textContent = item.label;
 
             const value = document.createElement('div');
-            value.style.marginTop = '0.35rem';
-            value.style.whiteSpace = 'pre-wrap';
-            value.style.fontSize = '0.95rem';
-            value.style.color = '#cbd5f5';
+            value.className = 'attempt-detail-item__value';
             value.textContent = item.value;
 
             container.appendChild(label);
