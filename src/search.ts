@@ -248,7 +248,7 @@ export async function runSearchLifecycle(
     options.callbacks?.onRefinedSearch?.({ previousQuery, newQuery: currentQuery });
     logger.info('refined_search', {
       session_id: options.sessionId,
-      previous_query: previousQuery,
+      previous_query: currentQuery,
       new_query: summary.recommendations[0],
       reason: 'low_score',
       median_score: summary.stats.median,
