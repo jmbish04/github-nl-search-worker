@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { Database } from './db';
-import { errorResponse, jsonResponse } from './util';
+import { errorResponse, jsonResponse, Logger } from './util';
+import { rateLimiter } from './ratelimit';
 import { runSearchLifecycle } from './search';
 import { createScaffold } from './scaffolder';
 import type { ScaffolderEnv } from './scaffolder';
@@ -49,15 +50,27 @@ const scaffoldSchema = z.object({
 });
 
 export function createApiRouter() {
-  const app = new Hono<{ Bindings: ApiEnv; Variables: { db: Database } }>();
+  const app = new Hono<{ Bindings: ApiEnv; Variables: { db: Database; logger: Logger } }>();
 
   app.use('*', async (c, next) => {
     c.set('db', new Database(c.env.DB));
+    c.set('logger', new Logger());
     await next();
   });
 
   app.use('/api/*', async (c, next) => {
-    const token = c.env.API_TOKEN;
+    const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? '127.0.0.1';
+    const { success, limit, remaining } = rateLimiter(ip);
+    c.res.headers.set('X-RateLimit-Limit', limit.toString());
+    c.res.headers.set('X-RateLimit-Remaining', remaining.toString());
+    if (!success) {
+      return errorResponse('rate_limited', 'Too many requests', 429);
+    }
+    await next();
+  });
+
+  app.use('/api/*', async (c, next) => {
+    const token = c.env.WORKER_API_KEY;
     if (!token) {
       return next();
     }
@@ -78,6 +91,7 @@ export function createApiRouter() {
   );
 
   app.post('/api/sessions', async (c) => {
+    const logger = c.get('logger');
     const body = await c.req.json();
     const parsed = createSessionSchema.safeParse(body);
     if (!parsed.success) {
@@ -86,6 +100,7 @@ export function createApiRouter() {
     const db = c.get('db');
     const sessionId = parsed.data.session_id ?? crypto.randomUUID();
     const session = await db.createSession(sessionId, parsed.data.natural_language_request);
+    logger.info('session_created', { session_id: sessionId });
     return jsonResponse(session, { status: 201 });
   });
 
@@ -130,6 +145,10 @@ export function createApiRouter() {
       return errorResponse('invalid_request', 'Invalid search payload', 400, parsed.error.format());
     }
 
+    const logger = c.get('logger').withContext({ session_id: sessionId, query: parsed.data.query });
+    logger.info('search_started');
+
+    const start = Date.now();
     const lifecycle = await runSearchLifecycle(c.env, db, {
       sessionId,
       query: parsed.data.query,
@@ -138,6 +157,7 @@ export function createApiRouter() {
       maxResults: parsed.data.max_results,
       searchWithinSessions: parsed.data.search_within_sessions,
       retryPolicy: parsed.data.retry_policy,
+      logger,
     });
 
     const first = lifecycle.attempts[0];
@@ -150,6 +170,8 @@ export function createApiRouter() {
     if (wait) {
       response.lifecycle = lifecycle;
     }
+    const latency = Date.now() - start;
+    logger.info('search_finished', { latency, cost: lifecycle.totalCost, attempts: lifecycle.attempts.length });
     return jsonResponse(response, { status: 202 });
   });
 
@@ -178,6 +200,22 @@ export function createApiRouter() {
     const sortParam = c.req.query('sort');
     const limit = Number(c.req.query('limit') ?? '20');
     const cursor = c.req.query('cursor');
+    const excludePreviousAttempts = c.req.query('exclude_previous_attempts') === 'true';
+
+    let excludeRepoIds: string[] | undefined;
+    if (excludePreviousAttempts && attemptId) {
+      const previousAttempts = await db.listAttempts(sessionId);
+      const previousRepoIds = new Set<string>();
+      for (const attempt of previousAttempts) {
+        if (attempt.attempt_id < Number(attemptId)) {
+          const results = await db.listResults({ sessionId, attemptId: attempt.attempt_id, limit: 1000 });
+          for (const result of results.items) {
+            previousRepoIds.add(result.repo_id);
+          }
+        }
+      }
+      excludeRepoIds = Array.from(previousRepoIds);
+    }
 
     const result = await db.listResults({
       sessionId,
@@ -188,6 +226,7 @@ export function createApiRouter() {
       sort: sortParam as any,
       limit,
       cursor,
+      excludeRepoIds,
     });
     return jsonResponse(result);
   });
@@ -203,6 +242,9 @@ export function createApiRouter() {
     if (!session) {
       return errorResponse('not_found', 'Session not found', 404);
     }
+    const logger = c.get('logger').withContext({ session_id: parsed.data.session_id });
+    logger.info('scaffold_started');
+    const start = Date.now();
     const result = await createScaffold(c.env, db, {
       sessionId: parsed.data.session_id,
       attemptId: parsed.data.attempt_id,
@@ -211,6 +253,8 @@ export function createApiRouter() {
       scaffoldTitle: parsed.data.scaffold_title,
       bindings: parsed.data.bindings,
     });
+    const latency = Date.now() - start;
+    logger.info('scaffold_finished', { latency, scaffold_id: result.scaffold_id });
     return jsonResponse(result, { status: 201 });
   });
 

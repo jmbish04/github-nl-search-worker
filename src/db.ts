@@ -320,6 +320,7 @@ export class Database {
     sort,
     limit,
     cursor,
+    excludeRepoIds,
   }: {
     sessionId: string;
     attemptId?: number;
@@ -329,6 +330,7 @@ export class Database {
     sort?: 'score_desc' | 'stars_desc' | 'time_desc';
     limit: number;
     cursor?: string | null;
+    excludeRepoIds?: string[];
   }): Promise<{ items: Array<SearchResultRow & { repo: RepoRow | null }>; nextCursor: string | null }> {
     const params: unknown[] = [sessionId];
     let where = 'r.session_id = ?1';
@@ -343,6 +345,11 @@ export class Database {
     if (query) {
       params.push(`%${query.toLowerCase()}%`);
       where += ` AND (LOWER(repo.full_name) LIKE ?${params.length} OR LOWER(repo.description) LIKE ?${params.length})`;
+    }
+    if (excludeRepoIds?.length) {
+      const placeholders = excludeRepoIds.map(() => '?').join(',');
+      params.push(...excludeRepoIds);
+      where += ` AND r.repo_id NOT IN (${placeholders})`;
     }
 
     let orderBy = 'r.inserted_at DESC';
@@ -516,5 +523,15 @@ export class Database {
       .bind(...sessionIds)
       .all<{ repo_id: string }>();
     return rows.results.map((row) => row.repo_id);
+  }
+
+  async getRepoEtags(repoFullNames: string[]): Promise<Map<string, string>> {
+    if (!repoFullNames.length) return new Map();
+    const placeholders = repoFullNames.map((_, idx) => `?${idx + 1}`).join(',');
+    const rows = await this.db
+      .prepare(`SELECT full_name, etag FROM repos WHERE full_name IN (${placeholders}) AND etag IS NOT NULL`)
+      .bind(...repoFullNames)
+      .all<{ full_name: string; etag: string }>();
+    return new Map(rows.results.map((row) => [row.full_name, row.etag]));
   }
 }

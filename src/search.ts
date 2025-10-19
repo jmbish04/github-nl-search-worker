@@ -1,6 +1,6 @@
 import { Database } from './db';
-import { hashString } from './util';
-import { mapRepoToRow, runGitHubSearch, GitHubSearchResponse } from './github';
+import { hashString, Logger } from './util';
+import { mapRepoToRow, runGitHubSearch, GitHubSearchResponse, fetchReadme } from './github';
 import { computeStatistics, runJudge } from './judge';
 import type { JudgeEnv } from './judge';
 
@@ -12,7 +12,14 @@ export interface SearchRetryPolicy {
 export interface SearchCallbacks {
   onAttemptStart?: (payload: { resultGroup: number; query: string; attemptId: number }) => void | Promise<void>;
   onGitHubBatch?: (payload: { attemptId: number; repos: Array<{ full_name: string; html_url: string; description: string | null }>; count: number }) => void | Promise<void>;
-  onJudgeUpdate?: (payload: { attemptId: number; findings: string; stats: { median: number; top5Mean: number }; recommendations: string[] }) => void | Promise<void>;
+  onJudgeUpdate?: (payload: {
+    attemptId: number;
+    findings: string;
+    stats: { median: number; top5Mean: number };
+    recommendations: string[];
+    perRepo: Array<{ full_name: string; score: number; note: string }>;
+  }) => void | Promise<void>;
+  onRefinedSearch?: (payload: { previousQuery: string; newQuery: string }) => void | Promise<void>;
   onAttemptComplete?: (summary: SearchAttemptSummary) => void | Promise<void>;
 }
 
@@ -25,10 +32,12 @@ export interface SearchOptions {
   searchWithinSessions?: string[];
   retryPolicy?: SearchRetryPolicy;
   callbacks?: SearchCallbacks;
+  logger?: Logger;
 }
 
 export interface SearchExecutionContext extends JudgeEnv {
   GITHUB_TOKEN?: string;
+  logger: Logger;
 }
 
 export interface SearchAttemptSummary {
@@ -71,6 +80,10 @@ async function executeSingleSearch(
   stats: { median: number; top5Mean: number };
   totalRepos: number;
 }> {
+  const logger = ctx.logger.withContext({ session_id: sessionId, query: searchQuery });
+  logger.info('execute_search_started');
+  const start = Date.now();
+
   const searchResponses = await runGitHubSearch({
     query: searchQuery,
     baseKeywords: options.baseKeywords,
@@ -93,38 +106,40 @@ async function executeSingleSearch(
     searchStrategyVersion: 'workers-v1',
   });
 
-  const repoMap = new Map<string, { response: GitHubSearchResponse; index: number; readme: string | null; url: string }>();
-  let repoIndex = 0;
-  for (const response of searchResponses) {
-    for (const item of response.items) {
-      if (!repoMap.has(item.repo.node_id)) {
-        repoMap.set(item.repo.node_id, {
-          response,
-          index: repoIndex++,
-          readme: item.readme,
-          url: item.repo.html_url,
-        });
-      }
-    }
-  }
-
-  const repos = Array.from(repoMap.entries()).map(([id, value]) => ({
-    id,
-    repo: value.response.items.find((item) => item.repo.node_id === id)!.repo,
-    readme: value.readme,
-  }));
-
+  const repos = searchResponses.flatMap((response) => response.items);
   callbacks?.onAttemptStart?.({ resultGroup, query: searchQuery, attemptId: attempt.id });
+
+  const repoFullNames = repos.map((repo) => repo.full_name);
+  const etags = await db.getRepoEtags(repoFullNames);
+
+  const readmeResults = await Promise.all(
+    repos.map(async (repo) => {
+      const etag = etags.get(repo.full_name);
+      const readme = await fetchReadme(repo.full_name, ctx.GITHUB_TOKEN, etag);
+      return { repo, readme };
+    })
+  );
+
+  const reposWithReadmes = readmeResults
+    .map(({ repo, readme }) => ({
+      repo: { ...repo, etag: readme.etag },
+      readme: readme.content,
+    }))
+    .filter((entry) => entry.readme !== null);
 
   await callbacks?.onGitHubBatch?.({
     attemptId: attempt.id,
-    count: repos.length,
-    repos: repos.map((entry) => ({ full_name: entry.repo.full_name, html_url: entry.repo.html_url, description: entry.repo.description })),
+    count: reposWithReadmes.length,
+    repos: reposWithReadmes.map((entry) => ({
+      full_name: entry.repo.full_name,
+      html_url: entry.repo.html_url,
+      description: entry.repo.description,
+    })),
   });
 
-  await db.insertRepos(repos.map((entry) => mapRepoToRow(entry.repo)));
+  await db.insertRepos(reposWithReadmes.map((entry) => mapRepoToRow(entry.repo)));
   await db.insertSearchResults(
-    repos.map((entry, idx) => ({
+    reposWithReadmes.map((entry, idx) => ({
       session_id: sessionId,
       search_attempt_id: attempt.id,
       repo_id: entry.repo.node_id,
@@ -138,7 +153,7 @@ async function executeSingleSearch(
 
   const judgePayload = {
     natural_language_request: naturalRequest,
-    repos: repos.slice(0, 20).map((entry) => ({
+    repos: reposWithReadmes.slice(0, 20).map((entry) => ({
       full_name: entry.repo.full_name,
       html_url: entry.repo.html_url,
       description: entry.repo.description,
@@ -150,7 +165,13 @@ async function executeSingleSearch(
   };
   const judge = await runJudge(ctx, judgePayload);
   const stats = computeStatistics(judge.per_repo);
-  await callbacks?.onJudgeUpdate?.({ attemptId: attempt.id, findings: judge.overall_findings, stats, recommendations: judge.recommendations });
+  await callbacks?.onJudgeUpdate?.({
+    attemptId: attempt.id,
+    findings: judge.overall_findings,
+    stats,
+    recommendations: judge.recommendations,
+    perRepo: judge.per_repo,
+  });
 
   await db.upsertJudgeReview({
     sessionId,
@@ -159,11 +180,22 @@ async function executeSingleSearch(
     recommendations: judge.recommendations,
   });
 
-  const fullNameToNode = new Map(repos.map((entry) => [entry.repo.full_name, entry.repo.node_id]));
+  const fullNameToNode = new Map(repos.map((entry) => [entry.full_name, entry.node_id]));
   const judgeScores = judge.per_repo
-    .map((item) => ({ repo_id: fullNameToNode.get(item.full_name) ?? item.full_name, score: item.score, note: item.note }))
+    .map((item) => ({
+      repo_id: fullNameToNode.get(item.full_name) ?? item.full_name,
+      score: item.score,
+      note: item.note,
+    }))
     .filter((item): item is { repo_id: string; score: number; note: string } => Boolean(item.repo_id));
   await db.updateResultScores(attempt.id, judgeScores);
+
+  const latency = Date.now() - start;
+  logger.info('execute_search_finished', {
+    latency,
+    total_repos: repos.length,
+    median_score: stats.median,
+  });
 
   return {
     attemptId: attempt.id,
@@ -181,6 +213,7 @@ export async function runSearchLifecycle(
   db: Database,
   options: SearchOptions
 ): Promise<SearchLifecycleResult> {
+  const logger = options.logger ?? new Logger();
   const baseKeywords = options.baseKeywords ?? true;
   const maxResults = options.maxResults ?? 30;
   const retryPolicy = options.retryPolicy ?? { max_attempts: 3, min_score: 0.65 };
@@ -189,11 +222,19 @@ export async function runSearchLifecycle(
   const attempts: SearchAttemptSummary[] = [];
   let currentQuery = options.query;
   for (let attemptIndex = 0; attemptIndex < (retryPolicy.max_attempts ?? 1); attemptIndex++) {
-    const summary = await executeSingleSearch(ctx, db, options.sessionId, options.naturalLanguageRequest, currentQuery, options.callbacks, {
-      baseKeywords,
-      maxResults,
-      searchWithinRepoIds: searchWithin,
-    });
+    const summary = await executeSingleSearch(
+      { ...ctx, logger },
+      db,
+      options.sessionId,
+      options.naturalLanguageRequest,
+      currentQuery,
+      options.callbacks,
+      {
+        baseKeywords,
+        maxResults,
+        searchWithinRepoIds: searchWithin,
+      }
+    );
     attempts.push(summary);
     await options.callbacks?.onAttemptComplete?.(summary);
     if (summary.stats.median >= (retryPolicy.min_score ?? 0.65) || summary.stats.top5Mean >= 0.75) {
@@ -202,7 +243,17 @@ export async function runSearchLifecycle(
     if (!summary.recommendations.length) {
       break;
     }
+    const previousQuery = currentQuery;
     currentQuery = summary.recommendations[0];
+    options.callbacks?.onRefinedSearch?.({ previousQuery, newQuery: currentQuery });
+    logger.info('refined_search', {
+      session_id: options.sessionId,
+      previous_query: currentQuery,
+      new_query: summary.recommendations[0],
+      reason: 'low_score',
+      median_score: summary.stats.median,
+      top5_mean_score: summary.stats.top5Mean,
+    });
   }
 
   return { attempts };

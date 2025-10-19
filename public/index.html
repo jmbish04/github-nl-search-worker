@@ -1,1 +1,42 @@
-PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KPGhlYWQ+CiAgPHRpdGxlPkdJVEhVQiBOYXR1cmFsIExhbmd1YWdlIFNlYXJjaDwvdGl0bGU+CiAgPHN0eWxlPgogICAgYm9keSB7IGZvbnQtZmFtaWx5OiBzYW5zLXNlcmlmOyBiYWNrZ3JvdW5kOiAjMDgxMDIwOyBjb2xvcjogI2ZmZjsgbWFyZ2luOiAwOyBwYWRkaW5nOiAyMHB4OyB9CiAgICAuaW5wdXQsIC5idXR0b24geyBtYXJnaW46IDhweCAwOyBwYWRkaW5nOiAxMHB4OyBib3JkZXI6IG5vbmU7IGJvcmRlci1yYWRpdXM6IDRweDsgfQogICAgLmlucHV0IHsgZmxleDogMTsgfQogICAgLnJlc3VsdCB7IGJhY2tncm91bmQ6ICMxZTFmMzA7IHBhZGRpbmc6IDEycHg7IG1hcmdpbi10b3A6IDIwcHg7IGJvcmRlci1yYWRpdXM6IDVweDsgfQogICAgdGFibGUgeyB3aWR0aDogMTAwJTsgYm9yZGVyLWNvbGxhcHNlOiBjb2xsYXBzZTsgfQogICAgdGggLCB0ZCB7IHBhZGRpbmc6IDhweDsgYm9yZGVyOiBzb2xpZCAxcHggI2NjYzsgdGV4dC1hbGlnbjogbGVmdDsgdmVydGljYWwtYWxpZ246IHRvcDsgfQogIDwvc3R5bGU+CjwvaGVhZD4KPGJvZHk+CiAgPGgyPk5hdHVyYWwgTGFuZ3VhZ2UgR2l0SHViIFNlYXJjaDwvaDI+CiAgPGlucHV0IGNsYXNzPSJpbnB1dCIgaWQ9InF1ZXJ5IiBwbGFjZWhvbGRlcj0iRW50ZXIgeW91ciBuYXR1cmFsIGxhbmd1YWdlIGlucXVpcnkgaGVyZSIgLz4KICA8YnV0dG9uIGNsYXNzPSJidXR0b24iIG9uY2xpY2s9InJ1blNlYXJjaCgp
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GitHub NL Search</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="project-creation">
+        <h1>Create a New Research Session</h1>
+        <input type="text" id="natural-language-request" placeholder="Enter your natural language request" />
+        <button id="create-session">Create Session</button>
+      </div>
+      <div id="search-container" class="hidden">
+        <h2 id="session-title"></h2>
+        <input type="text" id="search-query" placeholder="Enter your search query" />
+        <button id="start-search">Start Search</button>
+      </div>
+      <div id="progress-container" class="hidden">
+        <h2>Search Progress</h2>
+        <div id="progress-events"></div>
+      </div>
+      <div id="results-container" class="hidden">
+        <h2>Results</h2>
+        <div id="results"></div>
+      </div>
+      <div id="scaffolding-container" class="hidden">
+        <h2>Scaffolding</h2>
+        <textarea id="user-prompt" placeholder="Enter a prompt for the scaffolder"></textarea>
+        <input type="text" id="scaffold-title" placeholder="Enter a title for the scaffold" />
+        <button id="create-scaffold">Create Scaffold</button>
+      </div>
+      <div id="download-container" class="hidden">
+        <h2>Download</h2>
+        <code id="download-command"></code>
+      </div>
+    </div>
+    <script src="/app.js"></script>
+  </body>
+</html>
