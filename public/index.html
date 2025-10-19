@@ -681,7 +681,7 @@
           }
           const maxResults = Number(maxResultsInput.value);
           if (!Number.isNaN(maxResults) && maxResults > 0) {
-            payload.max_results = Math.min(Math.max(Math.floor(maxResults), 1), 100);
+            payload.max_results = Math.min(Math.max(Math.floor(maxResults), 1), MAX_RESULTS_LIMIT);
           }
           const within = withinSessionsInput.value
             .split(',')
