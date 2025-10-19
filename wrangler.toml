@@ -1,23 +1,28 @@
 name = "github-nl-search"
 main = "src/index.ts"
-compatibility_date = "2024-01-01"
+compatibility_date = "2024-10-01"
 compatibility_flags = ["nodejs_compat"]
 
-[observaibility]
+[observability]
 enabled = true
+
+[vars]
+GITHUB_API_URL = "https://api.github.com"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "github-search-db"
 database_id = "d657ff22-4451-4c7c-8728-d608ea5d7442"
+migrations_dir = "migrations"
+
+[[kv_namespaces]]
+binding = "AGENT_MEMORY"
+id = "5ebbdbe533774582b0d53e6180969b07"
 
 [[r2_buckets]]
 binding = "ARTIFACTS"
 bucket_name = "github-search-artifacts"
 
-[[assets]]
+[assets]
 binding = "ASSETS"
 directory = "./public"
-
-[vars]
-GITHUB_API_URL = "https://api.github.com"
