@@ -1,1 +1,776 @@
-PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KPGhlYWQ+CiAgPHRpdGxlPkdJVEhVQiBOYXR1cmFsIExhbmd1YWdlIFNlYXJjaDwvdGl0bGU+CiAgPHN0eWxlPgogICAgYm9keSB7IGZvbnQtZmFtaWx5OiBzYW5zLXNlcmlmOyBiYWNrZ3JvdW5kOiAjMDgxMDIwOyBjb2xvcjogI2ZmZjsgbWFyZ2luOiAwOyBwYWRkaW5nOiAyMHB4OyB9CiAgICAuaW5wdXQsIC5idXR0b24geyBtYXJnaW46IDhweCAwOyBwYWRkaW5nOiAxMHB4OyBib3JkZXI6IG5vbmU7IGJvcmRlci1yYWRpdXM6IDRweDsgfQogICAgLmlucHV0IHsgZmxleDogMTsgfQogICAgLnJlc3VsdCB7IGJhY2tncm91bmQ6ICMxZTFmMzA7IHBhZGRpbmc6IDEycHg7IG1hcmdpbi10b3A6IDIwcHg7IGJvcmRlci1yYWRpdXM6IDVweDsgfQogICAgdGFibGUgeyB3aWR0aDogMTAwJTsgYm9yZGVyLWNvbGxhcHNlOiBjb2xsYXBzZTsgfQogICAgdGggLCB0ZCB7IHBhZGRpbmc6IDhweDsgYm9yZGVyOiBzb2xpZCAxcHggI2NjYzsgdGV4dC1hbGlnbjogbGVmdDsgdmVydGljYWwtYWxpZ246IHRvcDsgfQogIDwvc3R5bGU+CjwvaGVhZD4KPGJvZHk+CiAgPGgyPk5hdHVyYWwgTGFuZ3VhZ2UgR2l0SHViIFNlYXJjaDwvaDI+CiAgPGlucHV0IGNsYXNzPSJpbnB1dCIgaWQ9InF1ZXJ5IiBwbGFjZWhvbGRlcj0iRW50ZXIgeW91ciBuYXR1cmFsIGxhbmd1YWdlIGlucXVpcnkgaGVyZSIgLz4KICA8YnV0dG9uIGNsYXNzPSJidXR0b24iIG9uY2xpY2s9InJ1blNlYXJjaCgp
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GitHub NL Search Console</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+        background: radial-gradient(circle at top, #0f172a 0%, #020617 55%, #010409 100%);
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: #e2e8f0;
+        background: transparent;
+      }
+
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 3rem 1.5rem 4rem;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 3vw + 1rem, 3rem);
+        margin-bottom: 0.5rem;
+      }
+
+      p.lead {
+        font-size: 1.05rem;
+        color: #94a3b8;
+        margin-top: 0;
+        margin-bottom: 2rem;
+        max-width: 720px;
+      }
+
+      .card {
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 18px;
+        padding: 1.75rem;
+        margin-bottom: 1.75rem;
+        box-shadow: 0 24px 60px -35px rgba(15, 118, 180, 0.45);
+        backdrop-filter: blur(12px);
+      }
+
+      .card h2 {
+        margin-top: 0;
+        margin-bottom: 1rem;
+        font-size: 1.25rem;
+        letter-spacing: 0.01em;
+      }
+
+      label span {
+        display: block;
+        font-size: 0.85rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #64748b;
+        margin-bottom: 0.35rem;
+      }
+
+      input[type="text"],
+      input[type="number"],
+      textarea {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: rgba(2, 6, 23, 0.75);
+        color: #e2e8f0;
+        font-size: 1rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      input:focus,
+      textarea:focus {
+        outline: none;
+        border-color: rgba(56, 189, 248, 0.75);
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+      }
+
+      textarea {
+        min-height: 120px;
+        resize: vertical;
+      }
+
+      .row {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .row.two {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .row.three {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      }
+
+      button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.6rem;
+        border-radius: 999px;
+        border: none;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        background: linear-gradient(135deg, #38bdf8, #2563eb);
+        color: #021221;
+        box-shadow: 0 10px 20px -10px rgba(56, 189, 248, 0.7);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+      }
+
+      button.secondary {
+        background: rgba(148, 163, 184, 0.18);
+        color: #cbd5f5;
+        box-shadow: none;
+      }
+
+      button:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 18px 30px -22px rgba(56, 189, 248, 0.9);
+        filter: brightness(1.03);
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .status {
+        padding: 1rem 1.25rem;
+        border-radius: 14px;
+        margin-bottom: 1.5rem;
+        background: rgba(15, 23, 42, 0.7);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        color: #cbd5f5;
+        font-size: 0.95rem;
+        min-height: 1.5rem;
+        display: flex;
+        align-items: center;
+      }
+
+      .status[data-state="pending"] {
+        border-color: rgba(56, 189, 248, 0.6);
+        background: rgba(14, 116, 144, 0.35);
+        color: #e0f2fe;
+      }
+
+      .status[data-state="success"] {
+        border-color: rgba(34, 197, 94, 0.55);
+        background: rgba(22, 101, 52, 0.35);
+        color: #bbf7d0;
+      }
+
+      .status[data-state="error"] {
+        border-color: rgba(239, 68, 68, 0.55);
+        background: rgba(127, 29, 29, 0.35);
+        color: #fecaca;
+      }
+
+      .session-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.4rem 0.85rem;
+        border-radius: 999px;
+        background: rgba(56, 189, 248, 0.16);
+        color: #bae6fd;
+        font-size: 0.9rem;
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        margin-top: 0.75rem;
+        word-break: break-all;
+        display: none;
+      }
+
+      .session-pill[data-active="true"] {
+        display: inline-flex;
+      }
+
+      .switch {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.95rem;
+        color: #cbd5f5;
+      }
+
+      .switch input[type="checkbox"] {
+        width: 1.5rem;
+        height: 1.5rem;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 0.75rem 0 0;
+      }
+
+      .chip {
+        padding: 0.35rem 0.75rem;
+        background: rgba(30, 41, 59, 0.8);
+        border-radius: 999px;
+        font-size: 0.85rem;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1.2rem;
+      }
+
+      thead th {
+        text-align: left;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #64748b;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      }
+
+      tbody td {
+        padding: 0.9rem 0.5rem;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+        vertical-align: top;
+      }
+
+      tbody tr:hover {
+        background: rgba(30, 64, 175, 0.12);
+      }
+
+      td.repo a {
+        color: #38bdf8;
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      td.repo a:hover {
+        text-decoration: underline;
+      }
+
+      td.description {
+        max-width: 360px;
+        color: #cbd5f5;
+      }
+
+      td.score {
+        font-feature-settings: "tnum" 1;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 1.5rem;
+        color: #64748b;
+        border: 1px dashed rgba(148, 163, 184, 0.35);
+        border-radius: 14px;
+        margin-top: 1rem;
+      }
+
+      pre {
+        background: rgba(2, 6, 23, 0.65);
+        border-radius: 12px;
+        padding: 1rem;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        max-height: 280px;
+        overflow: auto;
+        font-size: 0.85rem;
+        line-height: 1.4;
+      }
+
+      footer {
+        text-align: center;
+        color: #475569;
+        font-size: 0.85rem;
+        padding: 2rem 0;
+      }
+
+      @media (max-width: 640px) {
+        .card {
+          padding: 1.25rem;
+        }
+
+        button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>GitHub Natural Language Search</h1>
+        <p class="lead">
+          Prototype console for the GitHub NL Search Worker. Create a session, run an enriched GitHub search, and inspect the
+          judge-ranked repositories—all from this page.
+        </p>
+      </header>
+
+      <div id="status" class="status" data-state="idle">Ready when you are.</div>
+
+      <section class="card">
+        <h2>1. Configure access</h2>
+        <div class="row">
+          <label>
+            <span>API token (optional)</span>
+            <input type="text" id="api-token" autocomplete="off" placeholder="Paste the bearer token configured for the worker" />
+          </label>
+        </div>
+        <p style="color: #475569; font-size: 0.85rem; margin-top: 0.75rem;">
+          The token never leaves your browser. Leave it empty if your Worker does not require authentication.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>2. Create a session</h2>
+        <label>
+          <span>Natural language request</span>
+          <textarea id="natural-request" placeholder="Describe the type of repositories you need or the problem you’re solving."></textarea>
+        </label>
+        <div style="margin-top: 1.25rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+          <button id="create-session">Create session</button>
+          <div id="session-pill" class="session-pill" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>3. Run a search</h2>
+        <div class="row">
+          <label>
+            <span>Search query</span>
+            <input type="text" id="search-query" placeholder="Keywords for the GitHub code search" />
+          </label>
+        </div>
+        <div class="row two" style="margin-top: 1rem;">
+          <label class="switch">
+            <input type="checkbox" id="base-keywords" checked />
+            Expand with base keywords
+          </label>
+          <label>
+            <span>Max results</span>
+            <input type="number" id="max-results" min="1" max="100" value="30" />
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="wait-lifecycle" checked />
+            Wait for lifecycle summary
+          </label>
+        </div>
+        <label style="margin-top: 1rem; display: block;">
+          <span>Search within sessions (comma-separated IDs)</span>
+          <input type="text" id="within-sessions" placeholder="Optional: limit to results surfaced in these sessions" />
+        </label>
+        <div style="margin-top: 1.25rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+          <button id="run-search">Run search</button>
+          <button id="reset-search" type="button" class="secondary">Reset form</button>
+        </div>
+        <div id="expanded-queries" class="chips" aria-live="polite" style="display: none;"></div>
+        <div id="lifecycle-summary" style="margin-top: 1.25rem; display: none;">
+          <h3 style="margin: 0 0 0.75rem; font-size: 1.05rem; color: #cbd5f5;">Latest attempt summary</h3>
+          <div id="attempt-details" style="display: grid; gap: 0.75rem; margin-bottom: 1rem;"></div>
+          <pre id="lifecycle-json" aria-live="polite"></pre>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>4. Results</h2>
+        <div class="row three">
+          <label>
+            <span>Minimum judge score</span>
+            <input type="number" id="min-score" min="0" max="1" step="0.05" placeholder="e.g. 0.6" />
+          </label>
+          <label>
+            <span>Result limit</span>
+            <input type="number" id="result-limit" min="1" max="100" value="20" />
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="dedupe-results" checked />
+            Dedupe repositories
+          </label>
+        </div>
+        <div style="margin-top: 1.25rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+          <button id="refresh-results" class="secondary">Refresh results</button>
+        </div>
+        <div id="results-empty" class="empty-state" style="display: none;">No results yet. Run a search to populate this table.</div>
+        <table aria-live="polite">
+          <thead>
+            <tr>
+              <th scope="col">Repository</th>
+              <th scope="col">Score</th>
+              <th scope="col">Stars</th>
+              <th scope="col">Language</th>
+              <th scope="col">Judge finding</th>
+            </tr>
+          </thead>
+          <tbody id="results-body"></tbody>
+        </table>
+        <p id="results-pagination" style="color: #475569; font-size: 0.85rem; margin-top: 0.75rem; display: none;"></p>
+      </section>
+
+      <footer>
+        Built for quick experimentation. Inspect the REST API via <a href="/openapi.json" style="color: #38bdf8;">/openapi.json</a>.
+      </footer>
+    </main>
+
+    <script>
+      (() => {
+        const $ = (id) => document.getElementById(id);
+        const state = {
+          sessionId: null,
+          lastAttemptId: null,
+        };
+
+        const statusBox = $('status');
+        const tokenInput = $('api-token');
+        const naturalInput = $('natural-request');
+        const sessionPill = $('session-pill');
+        const queryInput = $('search-query');
+        const baseKeywordsInput = $('base-keywords');
+        const maxResultsInput = $('max-results');
+        const waitLifecycleInput = $('wait-lifecycle');
+        const withinSessionsInput = $('within-sessions');
+        const expandedQueriesEl = $('expanded-queries');
+        const lifecycleSummary = $('lifecycle-summary');
+        const attemptDetails = $('attempt-details');
+        const lifecycleJson = $('lifecycle-json');
+        const minScoreInput = $('min-score');
+        const limitInput = $('result-limit');
+        const dedupeInput = $('dedupe-results');
+        const resultsBody = $('results-body');
+        const resultsEmpty = $('results-empty');
+        const resultsPagination = $('results-pagination');
+
+        const createSessionButton = $('create-session');
+        const runSearchButton = $('run-search');
+        const resetSearchButton = $('reset-search');
+        const refreshResultsButton = $('refresh-results');
+
+        function setStatus(message, stateName = 'idle') {
+          statusBox.dataset.state = stateName;
+          statusBox.textContent = message;
+        }
+
+        function describeError(error) {
+          if (!error) return 'Unknown error';
+          if (error.details && typeof error.details === 'object') {
+            const details = error.details;
+            if (typeof details.message === 'string') {
+              return details.message;
+            }
+            if (details.error) {
+              return typeof details.error === 'string' ? details.error : JSON.stringify(details.error);
+            }
+          }
+          if (error.message) {
+            return error.message;
+          }
+          try {
+            return JSON.stringify(error);
+          } catch (err) {
+            return 'Unexpected error';
+          }
+        }
+
+        async function callApi(path, { method = 'GET', body, headers = {} } = {}) {
+          const requestInit = { method, headers: new Headers(headers) };
+          if (body !== undefined) {
+            requestInit.body = typeof body === 'string' ? body : JSON.stringify(body);
+            if (!requestInit.headers.has('Content-Type')) {
+              requestInit.headers.set('Content-Type', 'application/json');
+            }
+          }
+          const token = tokenInput.value.trim();
+          if (token && !requestInit.headers.has('Authorization')) {
+            requestInit.headers.set('Authorization', `Bearer ${token}`);
+          }
+          const response = await fetch(path, requestInit);
+          const text = await response.text();
+          let payload = null;
+          if (text) {
+            try {
+              payload = JSON.parse(text);
+            } catch (err) {
+              payload = text;
+            }
+          }
+          if (!response.ok) {
+            const error = new Error(`Request failed with status ${response.status}`);
+            error.status = response.status;
+            error.details = payload;
+            throw error;
+          }
+          return payload;
+        }
+
+        function renderExpandedQueries(queries = []) {
+          expandedQueriesEl.innerHTML = '';
+          if (!queries.length) {
+            expandedQueriesEl.style.display = 'none';
+            return;
+          }
+          for (const query of queries) {
+            const chip = document.createElement('span');
+            chip.className = 'chip';
+            chip.textContent = query;
+            expandedQueriesEl.appendChild(chip);
+          }
+          expandedQueriesEl.style.display = 'flex';
+        }
+
+        function renderAttemptSummary(lifecycle) {
+          if (!lifecycle || !Array.isArray(lifecycle.attempts) || lifecycle.attempts.length === 0) {
+            lifecycleSummary.style.display = 'none';
+            lifecycleJson.textContent = '';
+            attemptDetails.innerHTML = '';
+            return;
+          }
+          const latest = lifecycle.attempts[lifecycle.attempts.length - 1];
+          const expandedList = Array.isArray(latest.expandedQueries) ? latest.expandedQueries : [];
+          const recommendations = Array.isArray(latest.recommendations) ? latest.recommendations : [];
+          const stats = latest.stats ?? null;
+          attemptDetails.innerHTML = '';
+          const detailItems = [
+            { label: 'Attempt ID', value: latest.attemptId },
+            { label: 'Result group', value: latest.resultGroup },
+            { label: 'Expanded queries', value: expandedList.length ? expandedList.join(', ') : 'Not available' },
+            { label: 'Total repositories', value: latest.totalRepos },
+            {
+              label: 'Judge findings',
+              value: latest.judgeFindings || 'Pending judge evaluation.',
+            },
+            {
+              label: 'Recommendations',
+              value: recommendations.length
+                ? recommendations.map((entry) => `• ${entry}`).join('\n')
+                : 'No recommendations provided.',
+            },
+            {
+              label: 'Score stats',
+              value: stats && typeof stats.median === 'number' && typeof stats.top5Mean === 'number'
+                ? `Median: ${Number(stats.median).toFixed(3)} \u2022 Top5 mean: ${Number(stats.top5Mean).toFixed(3)}`
+                : 'Not available',
+            },
+          ];
+
+          for (const item of detailItems) {
+            const container = document.createElement('div');
+            container.style.background = 'rgba(15, 23, 42, 0.6)';
+            container.style.border = '1px solid rgba(148, 163, 184, 0.2)';
+            container.style.borderRadius = '10px';
+            container.style.padding = '0.75rem 0.9rem';
+
+            const label = document.createElement('div');
+            label.style.fontSize = '0.75rem';
+            label.style.textTransform = 'uppercase';
+            label.style.letterSpacing = '0.08em';
+            label.style.color = '#64748b';
+            label.textContent = item.label;
+
+            const value = document.createElement('div');
+            value.style.marginTop = '0.35rem';
+            value.style.whiteSpace = 'pre-wrap';
+            value.style.fontSize = '0.95rem';
+            value.style.color = '#cbd5f5';
+            value.textContent = item.value;
+
+            container.appendChild(label);
+            container.appendChild(value);
+            attemptDetails.appendChild(container);
+          }
+
+          lifecycleSummary.style.display = 'block';
+          lifecycleJson.textContent = JSON.stringify(lifecycle, null, 2);
+        }
+
+        function renderResults(items = [], nextCursor = null) {
+          resultsBody.innerHTML = '';
+          resultsPagination.style.display = 'none';
+          resultsPagination.textContent = '';
+
+          if (!items.length) {
+            resultsEmpty.style.display = 'block';
+            return;
+          }
+          resultsEmpty.style.display = 'none';
+
+          for (const item of items) {
+            const row = document.createElement('tr');
+
+            const repoCell = document.createElement('td');
+            repoCell.className = 'repo';
+            const link = document.createElement('a');
+            const repo = item.repo;
+            link.href = repo?.html_url ?? item.repo_url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = repo?.full_name ?? item.repo_url;
+            repoCell.appendChild(link);
+            row.appendChild(repoCell);
+
+            const scoreCell = document.createElement('td');
+            scoreCell.className = 'score';
+            if (typeof item.judge_relevance_score === 'number') {
+              scoreCell.textContent = item.judge_relevance_score.toFixed(3);
+            } else {
+              scoreCell.textContent = '—';
+            }
+            row.appendChild(scoreCell);
+
+            const starsCell = document.createElement('td');
+            starsCell.textContent = repo && typeof repo.stars === 'number' ? repo.stars.toLocaleString() : '—';
+            row.appendChild(starsCell);
+
+            const languageCell = document.createElement('td');
+            languageCell.textContent = repo?.language ?? '—';
+            row.appendChild(languageCell);
+
+            const findingCell = document.createElement('td');
+            findingCell.className = 'description';
+            findingCell.textContent = item.judge_finding ?? '';
+            row.appendChild(findingCell);
+
+            resultsBody.appendChild(row);
+          }
+
+          if (nextCursor) {
+            resultsPagination.style.display = 'block';
+            resultsPagination.textContent = `More results available. Use the cursor ${nextCursor} to page further via the API.`;
+          }
+        }
+
+        function requireSession() {
+          if (!state.sessionId) {
+            setStatus('Create a session before performing this action.', 'error');
+            return false;
+          }
+          return true;
+        }
+
+        createSessionButton.addEventListener('click', async () => {
+          const naturalRequest = naturalInput.value.trim();
+          if (!naturalRequest) {
+            setStatus('Please describe what you are searching for before creating a session.', 'error');
+            naturalInput.focus();
+            return;
+          }
+          createSessionButton.disabled = true;
+          setStatus('Creating session…', 'pending');
+          try {
+            const session = await callApi('/api/sessions', {
+              method: 'POST',
+              body: { natural_language_request: naturalRequest },
+            });
+            state.sessionId = session.session_id;
+            sessionPill.textContent = session.session_id;
+            sessionPill.dataset.active = 'true';
+            setStatus('Session created. You can now run a search.', 'success');
+          } catch (error) {
+            setStatus(`Failed to create session: ${describeError(error)}`, 'error');
+          } finally {
+            createSessionButton.disabled = false;
+          }
+        });
+
+        runSearchButton.addEventListener('click', async () => {
+          if (!requireSession()) return;
+          const query = queryInput.value.trim();
+          if (!query) {
+            setStatus('Enter a search query before running the search.', 'error');
+            queryInput.focus();
+            return;
+          }
+          runSearchButton.disabled = true;
+          setStatus('Running search…', 'pending');
+          const payload = {
+            query,
+          };
+          if (baseKeywordsInput.checked) {
+            payload.base_keywords = true;
+          }
+          const maxResults = Number(maxResultsInput.value);
+          if (!Number.isNaN(maxResults) && maxResults > 0) {
+            payload.max_results = Math.min(Math.max(Math.floor(maxResults), 1), 100);
+          }
+          const within = withinSessionsInput.value
+            .split(',')
+            .map((id) => id.trim())
+            .filter(Boolean);
+          if (within.length) {
+            payload.search_within_sessions = within;
+          }
+          const wait = waitLifecycleInput.checked;
+          const queryString = wait ? '?wait=true' : '';
+
+          try {
+            const response = await callApi(`/api/sessions/${state.sessionId}/search${queryString}`, {
+              method: 'POST',
+              body: payload,
+            });
+            state.lastAttemptId = response.attempt_id ?? null;
+            renderExpandedQueries(response.expanded_queries || []);
+            renderAttemptSummary(response.lifecycle);
+            setStatus('Search started. Fetching latest results…', 'success');
+            await refreshResults();
+          } catch (error) {
+            setStatus(`Search failed: ${describeError(error)}`, 'error');
+          } finally {
+            runSearchButton.disabled = false;
+          }
+        });
+
+        resetSearchButton.addEventListener('click', () => {
+          queryInput.value = '';
+          baseKeywordsInput.checked = true;
+          maxResultsInput.value = '30';
+          waitLifecycleInput.checked = true;
+          withinSessionsInput.value = '';
+          renderExpandedQueries([]);
+          renderAttemptSummary(null);
+          setStatus('Search form reset.', 'idle');
+        });
+
+        async function refreshResults() {
+          if (!requireSession()) return;
+          refreshResultsButton.disabled = true;
+          setStatus('Loading results…', 'pending');
+          try {
+            const params = new URLSearchParams();
+            const limitRaw = limitInput.value.trim();
+            if (limitRaw !== '') {
+              const limit = Number(limitRaw);
+              if (!Number.isNaN(limit) && limit > 0) {
+                params.set('limit', String(Math.min(Math.max(Math.floor(limit), 1), 100)));
+              }
+            }
+            const minScoreRaw = minScoreInput.value.trim();
+            if (minScoreRaw !== '') {
+              const minScore = Number(minScoreRaw);
+              if (!Number.isNaN(minScore)) {
+                const clamped = Math.min(Math.max(minScore, 0), 1);
+                params.set('min_score', clamped.toString());
+              }
+            }
+            if (!dedupeInput.checked) {
+              params.set('dedupe', 'false');
+            }
+            const url = params.toString()
+              ? `/api/sessions/${state.sessionId}/results?${params.toString()}`
+              : `/api/sessions/${state.sessionId}/results`;
+            const result = await callApi(url);
+            renderResults(result.items || [], result.nextCursor);
+            setStatus('Results updated.', 'success');
+          } catch (error) {
+            setStatus(`Failed to load results: ${describeError(error)}`, 'error');
+          } finally {
+            refreshResultsButton.disabled = false;
+          }
+        }
+
+        refreshResultsButton.addEventListener('click', refreshResults);
+
+        setStatus('Ready when you are.', 'idle');
+      })();
+    </script>
+  </body>
+</html>
