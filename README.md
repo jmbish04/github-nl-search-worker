@@ -58,7 +58,7 @@ Create a session:
 
 ```sh
 curl -X POST https://worker.example.com/api/sessions \
-  -H "Authorization: Bearer $API_TOKEN" \
+  -H "Authorization: Bearer $WORKER_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"natural_language_request":"Build a Worker that indexes GitHub repos"}'
 ```
@@ -67,7 +67,7 @@ Start a search and wait for results:
 
 ```sh
 curl -X POST https://worker.example.com/api/sessions/<session_id>/search?wait=true \
-  -H "Authorization: Bearer $API_TOKEN" \
+  -H "Authorization: Bearer $WORKER_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"query":"best Cloudflare Worker templates", "base_keywords":true, "max_results":30}'
 ```
@@ -76,7 +76,7 @@ List results filtered by score:
 
 ```sh
 curl -G https://worker.example.com/api/sessions/<session_id>/results \
-  -H "Authorization: Bearer $API_TOKEN" \
+  -H "Authorization: Bearer $WORKER_API_KEY" \
   --data-urlencode "min_score=0.7"
 ```
 
@@ -84,7 +84,7 @@ Generate a scaffold:
 
 ```sh
 curl -X POST https://worker.example.com/api/scaffolds \
-  -H "Authorization: Bearer $API_TOKEN" \
+  -H "Authorization: Bearer $WORKER_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "session_id": "<session_id>",
@@ -106,7 +106,7 @@ The Worker exposes an MCP endpoint at `/mcp`. Send a JSON payload specifying the
 
 ```sh
 curl -X POST https://worker.example.com/mcp \
-  -H "Authorization: Bearer $API_TOKEN" \
+  -H "Authorization: Bearer $WORKER_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"tool":"list_sessions","params":{"limit":10}}'
 ```
