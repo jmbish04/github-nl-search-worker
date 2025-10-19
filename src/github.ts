@@ -23,20 +23,14 @@ export interface GitHubRepository {
   etag?: string;
 }
 
-export interface RepositoryWithReadme {
-  repo: GitHubRepository;
-  readme: string | null;
-  sourceQuery: string;
-}
-
 export interface GitHubSearchResponse {
   query: string;
-  items: RepositoryWithReadme[];
+  items: GitHubRepository[];
 }
 
 const WORKER_KEYWORD_TEMPLATE = (
   query: string
-) => `("wrangler.toml" OR "wrangler.json" OR "wrangler.jsonc") AND ("Cloudflare Workers" OR "cloudflare worker" OR "cf worker") AND ${query}`;
+) => `"Cloudflare Workers" AND ${query}`;
 
 const LANGUAGE_TOPIC_TEMPLATE = (
   query: string
@@ -44,7 +38,7 @@ const LANGUAGE_TOPIC_TEMPLATE = (
 
 const FRAMEWORK_TEMPLATE = (
   query: string
-) => `(shadcn OR hono OR "itty-router" OR wretch) AND (in:readme cloudflare OR in:readme wrangler) AND ${query}`;
+) => `(hono OR "itty-router") AND (in:readme cloudflare) AND ${query}`;
 
 export function buildSearchQueries(naturalLanguage: string, baseKeywords = false): string[] {
   const sanitized = naturalLanguage.replace(/"/g, ' ');
@@ -66,6 +60,7 @@ export function buildSearchQueries(naturalLanguage: string, baseKeywords = false
 async function fetchGitHub(url: string, token?: string, init?: RequestInit): Promise<Response> {
   const headers: Record<string, string> = {
     Accept: 'application/vnd.github+json',
+    'User-Agent': 'GitHub-NL-Search-Worker',
   };
   if (token) {
     headers.Authorization = `Bearer ${token}`;
@@ -84,20 +79,31 @@ async function fetchGitHub(url: string, token?: string, init?: RequestInit): Pro
   return res;
 }
 
-async function fetchReadme(fullName: string, token?: string): Promise<{ content: string | null; etag?: string }> {
+export async function fetchReadme(
+  fullName: string,
+  token?: string,
+  etag?: string
+): Promise<{ content: string | null; etag?: string }> {
   try {
+    const headers: Record<string, string> = {
+      Accept: 'application/vnd.github.raw+json',
+    };
+    if (etag) {
+      headers['If-None-Match'] = etag;
+    }
     const res = await fetchGitHub(`https://api.github.com/repos/${fullName}/readme`, token, {
-      headers: {
-        Accept: 'application/vnd.github.raw+json',
-      },
+      headers,
     });
-    const etag = res.headers.get('etag') ?? undefined;
+    if (res.status === 304) {
+      return { content: null, etag };
+    }
+    const newEtag = res.headers.get('etag') ?? undefined;
     const contentType = res.headers.get('content-type');
     const text = contentType?.includes('application/json') ? await res.json() : await res.text();
     if (typeof text === 'object' && text && 'content' in text) {
-      return { content: atob((text as any).content), etag };
+      return { content: atob((text as any).content), etag: newEtag };
     }
-    return { content: typeof text === 'string' ? text : JSON.stringify(text), etag };
+    return { content: typeof text === 'string' ? text : JSON.stringify(text), etag: newEtag };
   } catch (err: any) {
     if (err instanceof Error && err.message.includes('404')) {
       return { content: null };
@@ -132,10 +138,9 @@ export async function runGitHubSearch(options: GitHubSearchOptions): Promise<Git
 
     const repos = dedupeBy(json.items ?? [], (item) => item.node_id);
 
-    const enriched: RepositoryWithReadme[] = [];
-    for (const repo of repos) {
-      if (!repo) continue;
-      const repoSummary: GitHubRepository = {
+    outputs.push({
+      query: q,
+      items: repos.map((repo) => ({
         id: repo.node_id || repo.id,
         node_id: repo.node_id || repo.id,
         full_name: repo.full_name,
@@ -146,14 +151,7 @@ export async function runGitHubSearch(options: GitHubSearchOptions): Promise<Git
         topics: Array.isArray(repo.topics) ? repo.topics : [],
         updated_at: repo.updated_at,
         default_branch: repo.default_branch,
-      };
-      const readme = await fetchReadme(repo.full_name, token);
-      enriched.push({ repo: { ...repoSummary, etag: readme.etag }, readme: readme.content, sourceQuery: q });
-    }
-
-    outputs.push({
-      query: q,
-      items: enriched,
+      })),
     });
   }
 

@@ -13,9 +13,9 @@ export default {
     if (url.pathname === '/mcp') {
       return handleMcpRequest(request, env);
     }
-    if (url.pathname === '/openapi.json' || url.pathname.startsWith('/docs')) {
-      return env.ASSETS.fetch(request);
+    if (url.pathname.startsWith('/api/')) {
+      return api.fetch(request, env, ctx);
     }
-    return api.fetch(request, env, ctx);
+    return env.ASSETS.fetch(request);
   },
 };

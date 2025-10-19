@@ -104,6 +104,31 @@ export function chunkArray<T>(arr: T[], size: number): T[][] {
   return result;
 }
 
+export class Logger {
+  constructor(private context: Record<string, any> = {}) {}
+
+  private log(level: 'info' | 'warn' | 'error', message: string, data: Record<string, any> = {}) {
+    const fullData = { ...this.context, ...data };
+    console.log(JSON.stringify({ timestamp: new Date().toISOString(), level, message, ...fullData }));
+  }
+
+  info(message: string, data: Record<string, any> = {}) {
+    this.log('info', message, data);
+  }
+
+  warn(message: string, data: Record<string, any> = {}) {
+    this.log('warn', message, data);
+  }
+
+  error(message: string, data: Record<string, any> = {}) {
+    this.log('error', message, data);
+  }
+
+  withContext(context: Record<string, any>) {
+    return new Logger({ ...this.context, ...context });
+  }
+}
+
 export function dedupeBy<T>(items: T[], getKey: (item: T) => string): T[] {
   const seen = new Set<string>();
   const result: T[] = [];
@@ -126,29 +151,53 @@ export function coalesceEvents<T>(
     intervalMs?: number;
     maxBatch?: number;
   } = {}
-) {
+): { emit: (event: T) => Promise<void>; flush: () => Promise<void> } {
   let buffer: T[] = [];
   let timeout: number | undefined;
+  let resolveFlush: (() => void) | undefined;
+  let flushPromise: Promise<void> | undefined;
 
-  const flush = async () => {
+  const performFlush = async () => {
     if (!buffer.length) return;
     const batch = buffer;
     buffer = [];
     clearTimeout(timeout);
     timeout = undefined;
     await emit(batch);
+    if (resolveFlush) {
+      resolveFlush();
+      resolveFlush = undefined;
+      flushPromise = undefined;
+    }
   };
 
-  return async (event: T) => {
+  const flush = (): Promise<void> => {
+    if (flushPromise) return flushPromise;
+
+    if (buffer.length === 0) {
+      return Promise.resolve();
+    }
+
+    // Wrap the flush operation in a promise to wait for completion
+    flushPromise = new Promise<void>((resolve) => {
+      resolveFlush = resolve;
+      performFlush();
+    });
+    return flushPromise;
+  };
+
+  const emitEvent = async (event: T) => {
     buffer.push(event);
     if (buffer.length >= maxBatch) {
-      await flush();
+      await performFlush();
       return;
     }
     if (timeout === undefined) {
       timeout = setTimeout(() => {
-        flush();
+        performFlush();
       }, intervalMs) as unknown as number;
     }
   };
+
+  return { emit: emitEvent, flush };
 }
