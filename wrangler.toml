@@ -1,4 +1,4 @@
-name = "github-nl-search"
+name = "github-search-nl"
 main = "src/index.ts"
 compatibility_date = "2024-10-01"
 compatibility_flags = ["nodejs_compat"]
