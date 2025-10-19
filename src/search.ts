@@ -120,26 +120,37 @@ async function executeSingleSearch(
     })
   );
 
-  const reposWithReadmes = readmeResults
-    .map(({ repo, readme }) => ({
-      repo: { ...repo, etag: readme.etag },
-      readme: readme.content,
-    }))
-    .filter((entry) => entry.readme !== null);
+  const reposWithReadmes = await Promise.all(
+    readmeResults.map(async ({ repo, readme }) => {
+      let content = readme.content;
+      if (content === null && readme.etag !== null) {
+        const cachedReadme = await db.getReadmeContent(repo.node_id);
+        if (cachedReadme) {
+          content = cachedReadme;
+        }
+      }
+      return {
+        repo: { ...repo, etag: readme.etag },
+        readme: content,
+      };
+    })
+  );
+
+  const filteredRepos = reposWithReadmes.filter((entry) => entry.readme !== null);
 
   await callbacks?.onGitHubBatch?.({
     attemptId: attempt.id,
-    count: reposWithReadmes.length,
-    repos: reposWithReadmes.map((entry) => ({
+    count: filteredRepos.length,
+    repos: filteredRepos.map((entry) => ({
       full_name: entry.repo.full_name,
       html_url: entry.repo.html_url,
       description: entry.repo.description,
     })),
   });
 
-  await db.insertRepos(reposWithReadmes.map((entry) => mapRepoToRow(entry.repo)));
+  await db.insertRepos(filteredRepos.map((entry) => mapRepoToRow(entry.repo)));
   await db.insertSearchResults(
-    reposWithReadmes.map((entry, idx) => ({
+    filteredRepos.map((entry, idx) => ({
       session_id: sessionId,
       search_attempt_id: attempt.id,
       repo_id: entry.repo.node_id,
@@ -153,7 +164,7 @@ async function executeSingleSearch(
 
   const judgePayload = {
     natural_language_request: naturalRequest,
-    repos: reposWithReadmes.slice(0, 20).map((entry) => ({
+    repos: filteredRepos.slice(0, 20).map((entry) => ({
       full_name: entry.repo.full_name,
       html_url: entry.repo.html_url,
       description: entry.repo.description,
@@ -248,7 +259,7 @@ export async function runSearchLifecycle(
     options.callbacks?.onRefinedSearch?.({ previousQuery, newQuery: currentQuery });
     logger.info('refined_search', {
       session_id: options.sessionId,
-      previous_query: previousQuery,
+      previous_query: currentQuery,
       new_query: summary.recommendations[0],
       reason: 'low_score',
       median_score: summary.stats.median,

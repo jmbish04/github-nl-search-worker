@@ -205,16 +205,12 @@ export function createApiRouter() {
     let excludeRepoIds: string[] | undefined;
     if (excludePreviousAttempts && attemptId) {
       const previousAttempts = await db.listAttempts(sessionId);
-      const previousRepoIds = new Set<string>();
-      for (const attempt of previousAttempts) {
-        if (attempt.attempt_id < Number(attemptId)) {
-          const results = await db.listResults({ sessionId, attemptId: attempt.attempt_id, limit: 1000 });
-          for (const result of results.items) {
-            previousRepoIds.add(result.repo_id);
-          }
-        }
+      const previousAttemptIds = previousAttempts
+        .filter((attempt) => attempt.attempt_id < Number(attemptId))
+        .map((attempt) => attempt.attempt_id);
+      if (previousAttemptIds.length > 0) {
+        excludeRepoIds = await db.getRepoIdsForAttempts(sessionId, previousAttemptIds);
       }
-      excludeRepoIds = Array.from(previousRepoIds);
     }
 
     const result = await db.listResults({

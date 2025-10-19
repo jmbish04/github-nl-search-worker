@@ -56,7 +56,7 @@ startSearchBtn.addEventListener('click', () => {
   results.innerHTML = '';
 
   const wsUrl = new URL(`/ws/sessions/${sessionId}`, window.location.href);
-  wsUrl.protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  wsUrl.protocol = 'ws';
   ws = new WebSocket(wsUrl.toString());
 
   ws.onopen = () => {
@@ -83,11 +83,22 @@ function logProgress(data) {
 function addResult(repo) {
   const resultElement = document.createElement('div');
   resultElement.classList.add('result-item');
-  resultElement.innerHTML = `
-    <input type="checkbox" data-repo-id="${repo.full_name}" />
-    <a href="${repo.html_url}" target="_blank">${repo.full_name}</a>
-    <p>${repo.description}</p>
-  `;
+
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.dataset.repoId = repo.full_name;
+  resultElement.appendChild(checkbox);
+
+  const link = document.createElement('a');
+  link.href = repo.html_url;
+  link.target = '_blank';
+  link.textContent = repo.full_name;
+  resultElement.appendChild(link);
+
+  const description = document.createElement('p');
+  description.textContent = repo.description;
+  resultElement.appendChild(description);
+
   results.appendChild(resultElement);
 }
 
@@ -112,24 +123,38 @@ createScaffoldBtn.addEventListener('click', async () => {
     return;
   }
 
-  const response = await fetch('/api/scaffolds', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      session_id: sessionId,
-      selected_repo_ids: selectedRepoIds,
-      user_prompt: prompt,
-      scaffold_title: title,
-    }),
-  });
+  try {
+    const response = await fetch('/api/scaffolds', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        session_id: sessionId,
+        selected_repo_ids: selectedRepoIds,
+        user_prompt: prompt,
+        scaffold_title: title,
+      }),
+    });
 
-  const data = await response.json();
-  const scaffoldId = data.scaffold_id;
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to create scaffold');
+    }
 
-  const downloadResponse = await fetch(`/api/scaffolds/${scaffoldId}/download`);
-  const downloadData = await downloadResponse.json();
-  downloadCommand.textContent = downloadData.curl;
-  downloadContainer.classList.remove('hidden');
+    const data = await response.json();
+    const scaffoldId = data.scaffold_id;
+
+    const downloadResponse = await fetch(`/api/scaffolds/${scaffoldId}/download`);
+    if (!downloadResponse.ok) {
+      const errorData = await downloadResponse.json();
+      throw new Error(errorData.message || 'Failed to get download link');
+    }
+    const downloadData = await downloadResponse.json();
+    downloadCommand.textContent = downloadData.curl;
+    downloadContainer.classList.remove('hidden');
+  } catch (error) {
+    console.error('Scaffolding error:', error);
+    alert(`An error occurred: ${error.message}`);
+  }
 });

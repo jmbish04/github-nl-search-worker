@@ -101,9 +101,9 @@ export async function fetchReadme(
     const contentType = res.headers.get('content-type');
     const text = contentType?.includes('application/json') ? await res.json() : await res.text();
     if (typeof text === 'object' && text && 'content' in text) {
-      return { content: atob((text as any).content), etag };
+      return { content: atob((text as any).content), etag: newEtag };
     }
-    return { content: typeof text === 'string' ? text : JSON.stringify(text), etag };
+    return { content: typeof text === 'string' ? text : JSON.stringify(text), etag: newEtag };
   } catch (err: any) {
     if (err instanceof Error && err.message.includes('404')) {
       return { content: null };

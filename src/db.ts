@@ -534,4 +534,22 @@ export class Database {
       .all<{ full_name: string; etag: string }>();
     return new Map(rows.results.map((row) => [row.full_name, row.etag]));
   }
+
+  async getReadmeContent(repoId: string): Promise<string | null> {
+    const row = await this.db
+      .prepare(`SELECT readme_content FROM search_results WHERE repo_id = ?1 ORDER BY inserted_at DESC LIMIT 1`)
+      .bind(repoId)
+      .first<{ readme_content: string | null }>();
+    return row?.readme_content ?? null;
+  }
+
+  async getRepoIdsForAttempts(sessionId: string, attemptIds: number[]): Promise<string[]> {
+    if (!attemptIds.length) return [];
+    const placeholders = attemptIds.map(() => '?').join(',');
+    const rows = await this.db
+      .prepare(`SELECT DISTINCT repo_id FROM search_results WHERE session_id = ?1 AND search_attempt_id IN (${placeholders})`)
+      .bind(sessionId, ...attemptIds)
+      .all<{ repo_id: string }>();
+    return rows.results.map((row) => row.repo_id);
+  }
 }
