@@ -92,6 +92,7 @@ function addResult(repo) {
   const link = document.createElement('a');
   link.href = repo.html_url;
   link.target = '_blank';
+  link.rel = 'noopener noreferrer';
   link.textContent = repo.full_name;
   resultElement.appendChild(link);
 
