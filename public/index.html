@@ -504,7 +504,7 @@
         }
 
         function renderExpandedQueries(queries = []) {
-          expandedQueriesEl.innerHTML = '';
+          expandedQueriesEl.replaceChildren();
           if (!queries.length) {
             expandedQueriesEl.style.display = 'none';
             return;
