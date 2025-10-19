@@ -1,6 +1,6 @@
 import { Database } from './db';
 import { runSearchLifecycle, SearchCallbacks } from './search';
-import { errorResponse, verifySessionToken } from './util';
+import { coalesceEvents, errorResponse, verifySessionToken } from './util';
 import type { ApiEnv } from './routes';
 
 export interface WsEnv extends ApiEnv {
@@ -36,6 +36,31 @@ export async function handleSessionWebSocket(request: Request, env: WsEnv): Prom
     }
   };
 
+  const { emit: emitGitHubBatch, flush: flushGitHubBatch } = coalesceEvents(
+    (batch) => {
+      const first = batch[0];
+      const totalCount = batch.reduce((sum, item) => sum + item.count, 0);
+      const allRepos = batch.flatMap((item) => item.repos);
+      send({ type: 'github_batch', attempt_id: first.attemptId, count: totalCount, repos: allRepos });
+    },
+    { intervalMs: 300, maxBatch: 20 }
+  );
+
+  const { emit: emitJudgeUpdate, flush: flushJudgeUpdate } = coalesceEvents(
+    (batch) => {
+      const latest = batch[batch.length - 1];
+      send({
+        type: 'judge_update',
+        attempt_id: latest.attemptId,
+        stage: 'initial',
+        score_summary: latest.stats,
+        findings: latest.findings,
+        recommendations: latest.recommendations,
+      });
+    },
+    { intervalMs: 300, maxBatch: 1 }
+  );
+
   server.addEventListener('message', async (event) => {
     try {
       const message = JSON.parse(typeof event.data === 'string' ? event.data : new TextDecoder().decode(event.data));
@@ -49,20 +74,19 @@ export async function handleSessionWebSocket(request: Request, env: WsEnv): Prom
           onAttemptStart: ({ attemptId, resultGroup, query }) => {
             send({ type: 'attempt_started', attempt_id: attemptId, result_group: resultGroup, search_query: query });
           },
-          onGitHubBatch: ({ attemptId, repos, count }) => {
-            send({ type: 'github_batch', attempt_id: attemptId, count, repos });
+          onGitHubBatch: (payload) => {
+            emitGitHubBatch(payload);
           },
-          onJudgeUpdate: ({ attemptId, findings, stats, recommendations }) => {
-            send({
-              type: 'judge_update',
-              attempt_id: attemptId,
-              stage: 'initial',
-              score_summary: stats,
-              findings,
-              recommendations,
-            });
+          onJudgeUpdate: (payload) => {
+            emitJudgeUpdate(payload);
           },
-          onAttemptComplete: (summary) => {
+          onRefinedSearch: ({ previousQuery, newQuery }) => {
+            send({ type: 'refined_search', previous_query: previousQuery, new_query: newQuery });
+          },
+          onAttemptComplete: async (summary) => {
+            await flushGitHubBatch();
+            await flushJudgeUpdate();
+
             send({
               type: 'finalized',
               attempt_id: summary.attemptId,
