@@ -2,17 +2,18 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { Database } from './db';
 import { errorResponse, jsonResponse, Logger } from './util';
-import { rateLimiter } from './ratelimit';
+import { checkRateLimit, type RateLimiterBindings } from './ratelimit';
 import { runSearchLifecycle } from './search';
 import { createScaffold } from './scaffolder';
 import type { ScaffolderEnv } from './scaffolder';
 import type { SearchExecutionContext } from './search';
 
-export interface ApiEnv extends ScaffolderEnv, SearchExecutionContext {
+export interface ApiEnv extends ScaffolderEnv, SearchExecutionContext, RateLimiterBindings {
   DB: D1Database;
   ARTIFACTS: R2Bucket;
   ASSETS: Fetcher;
   API_TOKEN?: string;
+  WORKER_API_KEY?: string;
 }
 
 const createSessionSchema = z.object({
@@ -59,12 +60,26 @@ export function createApiRouter() {
   });
 
   app.use('/api/*', async (c, next) => {
-    const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? '127.0.0.1';
-    const { success, limit, remaining } = rateLimiter(ip);
-    c.res.headers.set('X-RateLimit-Limit', limit.toString());
-    c.res.headers.set('X-RateLimit-Remaining', remaining.toString());
-    if (!success) {
-      return errorResponse('rate_limited', 'Too many requests', 429);
+    const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for');
+    if (!ip) {
+      return errorResponse('bad_request', 'Could not determine client IP', 400);
+    }
+    try {
+      const result = await checkRateLimit(c.env, ip);
+      if (result.success) {
+        c.header('X-RateLimit-Limit', result.limit.toString());
+        c.header('X-RateLimit-Remaining', result.remaining.toString());
+      } else {
+        const response = errorResponse('rate_limited', 'Too many requests', 429);
+        response.headers.set('X-RateLimit-Limit', result.limit.toString());
+        response.headers.set('X-RateLimit-Remaining', result.remaining.toString());
+        if (result.retryAfterMs !== undefined) {
+          response.headers.set('Retry-After', Math.ceil(result.retryAfterMs / 1000).toString());
+        }
+        return response;
+      }
+    } catch (error) {
+      return errorResponse('rate_limiter_unavailable', 'Could not connect to rate limiter', 502);
     }
     await next();
   });
