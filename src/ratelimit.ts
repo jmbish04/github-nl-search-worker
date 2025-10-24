@@ -88,7 +88,7 @@ export class RateLimiter extends DurableObject {
   }
 
   private nextAlarmTime(): number {
-    return Date.now() + RateLimiter.milliseconds_for_updates * RateLimiter.milliseconds_per_request;
+    return Date.now() + RateLimiter.milliseconds_for_updates;
   }
 }
 
