@@ -12,7 +12,6 @@ export interface ApiEnv extends ScaffolderEnv, SearchExecutionContext, RateLimit
   DB: D1Database;
   ARTIFACTS: R2Bucket;
   ASSETS: Fetcher;
-  API_TOKEN?: string;
   WORKER_API_KEY?: string;
 }
 
