@@ -19,9 +19,9 @@ export interface RateLimitResult {
 }
 
 export class RateLimiter extends DurableObject {
-  static milliseconds_per_request = 1;
-  static milliseconds_for_updates = 5000;
-  static capacity = 10000;
+  static readonly CAPACITY = 10000;
+  static readonly REFILL_INTERVAL_MS = 5000;
+  static readonly TOKENS_PER_REFILL = 5000; // This equates to a rate of 1000 tokens/sec
 
   private tokens?: number;
 
